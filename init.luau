@@ -75,7 +75,7 @@ export type ClientSignal<T...> = {
 
 export type Function<T..., U...> = {
     InvokeServer: (self: Function<T..., U...>, T...) -> (U...),
-    OnServerInvoke: (self: Function<T..., U...>, callback: (player: Player, T...) -> (U...)) -> (),
+    OnServerInvoke: (player: Player, T...) -> (U...),
 }
 
 export type Event<T...> = {
