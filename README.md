@@ -83,6 +83,61 @@ local positionUpdate = Remote.Unreliable("PositionUpdate")
 positionUpdate:FireAllClients(Vector3.new(0, 10, 0))
 ```
 
+## Creating a Networking Package
+
+Because every remote is fully typed, you can define all your game's remotes in a single shared module, acting as a central, type-safe networking layer that both server and client scripts import.
+
+```lua
+-- ReplicatedStorage/Network.luau
+local Remote = require(path.to.Remote)
+
+local Network = {
+    -- Events
+    PlayerDamaged = Remote.Event("PlayerDamaged") :: Remote.Event<number>,
+    ChatMessage = Remote.Event("ChatMessage") :: Remote.Event<string, string>,
+    ItemPickedUp = Remote.Event("ItemPickedUp") :: Remote.Event<string, number>,
+    
+    -- Unreliable (high-frequency, loss-tolerant)
+    PositionSync = Remote.Unreliable("PositionSync") :: Remote.Event<Vector3, Vector3>,
+    
+    -- Functions
+    GetInventory = Remote.Function("GetInventory") :: Remote.Function<(), { [string]: number }>,
+    PurchaseItem = Remote.Function("PurchaseItem") :: Remote.Function<(string, number), boolean>,
+}
+
+return Network
+```
+
+Then use it anywhere with full autocomplete and type checking:
+
+```lua
+-- Server Script
+local Network = require(ReplicatedStorage.Network)
+
+Network.PlayerDamaged.OnServerEvent:Connect(function(player, damage)
+    -- `player` is Player, `damage` is number ✓
+end)
+
+Network.GetInventory:OnServerInvoke(function(player)
+    -- must return { [string]: number } ✓
+    return { Sword = 1, Shield = 2 }
+end)
+```
+
+```lua
+-- Client Script
+local Network = require(ReplicatedStorage.Network)
+
+Network.ChatMessage:FireServer("general", "Hello!")        -- (string, string) ✓
+Network.PositionSync.OnClientEvent:Connect(function(pos, vel)
+    -- `pos` and `vel` are Vector3 ✓
+end)
+
+local inventory = Network.GetInventory:InvokeServer()      -- returns { [string]: number } ✓
+```
+
+This pattern gives you a single source of truth for every remote in your game, with full type safety across the server-client boundary.
+
 ## Types
 
 The module exports the following types for use in typed Luau code:
